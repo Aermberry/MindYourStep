@@ -1,4 +1,4 @@
-import { _decorator, Component, Prefab, instantiate, Node, CCInteger } from 'cc';
+import { _decorator, Component, Prefab, instantiate, Node, CCInteger, Vec3, Label } from 'cc';
 import { PlayerController } from './PlayerController';
 const { ccclass, property } = _decorator;
 
@@ -6,6 +6,12 @@ const { ccclass, property } = _decorator;
 enum BlockType {
     BT_NONE,
     BT_STONE,
+};
+
+enum GameState {
+    GS_INIT,
+    GS_PLAYING,
+    GS_END,
 };
 
 @ccclass("GameManager")
@@ -25,8 +31,72 @@ export class GameManager extends Component {
     @property({ type: Node })
     public startMenu: Node | null = null;
 
+    @property({ type: Label })
+    public stepsLabel: Label | null = null;
+
     start() {
+
+        this.curState = GameState.GS_INIT;
+        // ?. 可選鏈寫法
+        this.playerCtrl?.node.on('JumpEnd', this.onPlayerJumpEnd, this);
+    }
+
+    init() {
+        if (this.startMenu) {
+            this.startMenu.active = true;
+        }
+
+        //生成賽道
         this.generateRoad();
+        if (this.playerCtrl) {
+            //禁止接受用戶操作人物移動指令
+            this.playerCtrl.setInputActive(false);
+            //重置人物位置
+            this.playerCtrl.node.setPosition(Vec3.ZERO);
+        }
+
+        this.playerCtrl.reset();
+    }
+
+    onPlayerJumpEnd(moveIndex: number) {
+
+        if (this.stepsLabel) {
+            //因为在最后一步可能出现步伐大的跳跃，但是
+            this.stepsLabel.string = '' + (moveIndex >= this.roadLength ? this.roadLength : moveIndex);
+        }
+
+        this.checkResult(moveIndex);
+    }
+
+    set curState(value: GameState) {
+        switch (value) {
+            case GameState.GS_INIT:
+                this.init();
+                break;
+            case GameState.GS_PLAYING:
+                if (this.startMenu) {
+                    this.startMenu.active = false;
+                }
+
+                if (this.stepsLabel) {
+                    this.stepsLabel.string = '0';//将步数重置为0
+                }
+
+                // 设置 active 为 true 时会直接开始监听鼠标事件，此时鼠标抬起事件还未派发
+                // 会出现的现象就是，游戏开始的瞬间人物已经开始移动
+                // 因此，这里需要做延迟处理
+                setTimeout(() => {
+                    if (this.playerCtrl) {
+                        this.playerCtrl.setInputActive(true);
+                    }
+                }, 0.1);
+                break;
+            case GameState.GS_END:
+                break;
+
+            default:
+                break;
+        }
     }
 
     generateRoad() {
@@ -72,6 +142,23 @@ export class GameManager extends Component {
         }
 
         return block;
+    }
+
+
+    onStartButtonClicked() {
+        this.curState = GameState.GS_PLAYING;
+    }
+
+    checkResult(moveIndex: number) {
+        if (moveIndex < this.roadLength) {
+            //跳到了坑上
+            if (this._road[moveIndex] == BlockType.BT_NONE) {
+                this.curState = GameState.GS_INIT;
+            }
+        }
+        else {
+            this.curState = GameState.GS_INIT;
+        }
     }
 
     // update (deltaTime: number) {

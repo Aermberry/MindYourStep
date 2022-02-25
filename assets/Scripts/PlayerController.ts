@@ -1,5 +1,5 @@
 
-import { _decorator, Component, Vec3,input,Input,EventMouse,Animation,Node } from 'cc';
+import { _decorator, Component, Vec3, input, Input, EventMouse, Animation, Node } from 'cc';
 const { ccclass, property } = _decorator;
 
 /**
@@ -13,7 +13,7 @@ const { ccclass, property } = _decorator;
  * ManualUrl = https://docs.cocos.com/creator/3.4/manual/en/
  *
  */
- 
+
 @ccclass('PlayerController')
 export class PlayerController extends Component {
     // [1]
@@ -40,21 +40,22 @@ export class PlayerController extends Component {
     private _deltaPos: Vec3 = new Vec3(0, 0, 0);
     // 角色目标位置
     private _targetPos: Vec3 = new Vec3();
+    private _curMoveIndex = 0;
 
-    @property({type: Animation})
+    @property({ type: Animation })
     public BodyAnim: Animation | null = null;
 
-    start () {
+    start() {
         // [3]
 
-        input.on(Input.EventType.MOUSE_UP,this.onMouseUp,this);
+        input.on(Input.EventType.MOUSE_UP, this.onMouseUp, this);
     }
 
-    setInputActive(active:boolean){
-        if(active){
-            input.on(Input.EventType.MOUSE_UP,this.onMouseUp,this);
-        }else{
-            input.off(Input.EventType.MOUSE_UP,this.onMouseUp,this);
+    setInputActive(active: boolean) {
+        if (active) {
+            input.on(Input.EventType.MOUSE_UP, this.onMouseUp, this);
+        } else {
+            input.off(Input.EventType.MOUSE_UP, this.onMouseUp, this);
         }
     }
 
@@ -78,7 +79,7 @@ export class PlayerController extends Component {
         this._curJumpSpeed = this._jumpStep / this._jumpTime;
         this.node.getPosition(this._curPos);
         Vec3.add(this._targetPos, this._curPos, new Vec3(this._jumpStep, 0, 0));
-        
+
         if (this.BodyAnim) {
             if (step === 1) {
                 this.BodyAnim.play('oneStep');
@@ -86,9 +87,20 @@ export class PlayerController extends Component {
                 this.BodyAnim.play('twoStep');
             }
         }
+
+        this._curMoveIndex += step;
     }
 
-    update (deltaTime: number) {
+    onOnceJumpEnd() {
+        this.node.emit('JumpEnd', this._curMoveIndex);
+    }
+
+
+    reset() {
+        this._curMoveIndex = 0;
+    }
+
+    update(deltaTime: number) {
         // [4]
         if (this._startJump) {
             this._curJumpTime += deltaTime;
