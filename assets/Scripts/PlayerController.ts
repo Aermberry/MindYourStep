@@ -1,5 +1,5 @@
 
-import { _decorator, Component, Vec3, input, Input, EventMouse, Animation, Node } from 'cc';
+import { _decorator, Component, Vec3, input, Input, EventMouse, Animation, Node, SkeletalAnimation } from 'cc';
 const { ccclass, property } = _decorator;
 
 /**
@@ -42,8 +42,11 @@ export class PlayerController extends Component {
     private _targetPos: Vec3 = new Vec3();
     private _curMoveIndex = 0;
 
-    @property({ type: Animation })
-    public BodyAnim: Animation | null = null;
+    // @property({ type: Animation })
+    // public BodyAnim: Animation | null = null;
+
+    @property({ type: SkeletalAnimation })
+    public CocosAnim: SkeletalAnimation | null = null;
 
     start() {
         // [3]
@@ -79,19 +82,28 @@ export class PlayerController extends Component {
         this._curJumpSpeed = this._jumpStep / this._jumpTime;
         this.node.getPosition(this._curPos);
         Vec3.add(this._targetPos, this._curPos, new Vec3(this._jumpStep, 0, 0));
-
-        if (this.BodyAnim) {
-            if (step === 1) {
-                this.BodyAnim.play('oneStep');
-            } else if (step === 2) {
-                this.BodyAnim.play('twoStep');
-            }
+        
+        if (this.CocosAnim) {
+            this.CocosAnim.getState('cocos_anim_jump').speed = 3.5; // 跳跃动画时间比较长，这里加速播放
+            this.CocosAnim.play('cocos_anim_jump'); // 播放跳跃动画
         }
+
+        // if (this.BodyAnim) {
+        //     if (step === 1) {
+        //         this.BodyAnim.play('oneStep');
+        //     } else if (step === 2) {
+        //         this.BodyAnim.play('twoStep');
+        //     }
+        // }
+
 
         this._curMoveIndex += step;
     }
 
     onOnceJumpEnd() {
+        if (this.CocosAnim) {
+            this.CocosAnim.play('cocos_anim_idle');
+        }
         this.node.emit('JumpEnd', this._curMoveIndex);
     }
 
